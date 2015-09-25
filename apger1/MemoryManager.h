@@ -11,39 +11,53 @@
 
 #include "Process.h"
 #include <queue>
-
-#define NUMBER_PARTITIONS 6;
+#define NUMBER_PARTITIONS 4
 
 class Partition {
-public:
+public:  
     // INSERT YOUR CODE HERE
     // ...
-    std::queue<Process*> getProcessQueue() {
-        return _processQueue;
+    
+    void addQueue(Process* process) {
+        this->_processQueue.push(process);
     }
-
-    // CONSTRUCTOR
+    
+    Process* popQueue() {
+        Process* process = this->_processQueue.front();
+        this->_processQueue.pop();
+        return process;
+    }
+    
+    bool queueEmpty() {
+        return this->_processQueue.empty();
+    }
+    
+    //Constructor
     Partition(unsigned int begin, unsigned int end) {
         _beginAddress = begin;
         _endAddress = end;
         _hasProcess = false;
     }
-
+    
     void setProcess(Process* process) {
         this->_process = process;
         if (!_hasProcess) {
             this->_hasProcess = true;
         }
     }
-
+    
     Process* getProcess() {
         return this->_process;
     }
-
+    
     bool hasProcess() {
         return this->_hasProcess;
     }
-
+    
+    void removeProcess() {
+        this->_hasProcess = false;
+    }
+    
 public:  // do not change
     unsigned int getBeginAddress() {
         return _beginAddress;
@@ -52,7 +66,7 @@ public:  // do not change
         return _endAddress;
     }
     unsigned int getLength() {
-        return _endAddress - _beginAddres;
+        return _endAddress - _beginAddress;
     }
 private: // do not change
         unsigned int _beginAddress;
@@ -60,12 +74,13 @@ private: // do not change
 private:
     // INSERT YOUR CODE HERE
     // ...
-        std::queue<Process*> _processQueue;
-        Process* _process;
-        bool _hasProcess;
+    std::queue<Process*> _processQueue;
+    Process* _process;
+    bool _hasProcess;
 };
 
-///////////////////////////////////////////////////////////////////
+
+///////////////////////////////////////
 
 class MemoryManager {
 public: // do not change
@@ -87,6 +102,9 @@ private: // private attributes
 private: // private methods
     // INSERT YOUR CODE HERE
     // ...
+    unsigned int getProcessSize(Process* process);
 };
 
 #endif	/* MEMORYMANAGER_H */
+
+

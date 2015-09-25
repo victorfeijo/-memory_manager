@@ -7,26 +7,26 @@
  */
 
 #include <iostream>
-#include <queue>
 #include "MemoryManager.h"
 
-MemoryManager::MemoryManager(unsigned int size) {
+MemoryManager::MemoryManager(unsigned int size) { 
     // do not change
     this->_size = size;
     // INSERT YOUR CODE TO INITIALIZE OTHER PRIVATE ATTRIBUTES
     // ...
-    //PARTIÇÕES CRIADAS ESTÁTICAMENTE POR CRITÉRIO PRÓPRIO
+    //PARTIÇÕES CRIADAS ESTATICAMENTE POR CRITÉRIO PRÓPRIO
     //6 PARTIÇÕES COM TAMANHO CRESCENTE
-
     unsigned int lastEnd = 0;
     unsigned int actualSize;
     for(int i = 0; i < NUMBER_PARTITIONS-1; i++) {
-        actualSize = _size*(i+1)/21;
+        actualSize = _size*(i+1)/10;
+         if (i==0)
+            actualSize = actualSize*13/8;
         _partitions[i] = new Partition(lastEnd, lastEnd+actualSize-1);
         lastEnd += actualSize;
     }
-    _partitions[NUMBER_PARTITIONS] = new Partition(lastEnd, _size-1);
-
+    _partitions[NUMBER_PARTITIONS-1] = new Partition(lastEnd, _size-1);
+    std::cout << "Memory Manager created sucesfull!\n"; 
 }
 
 MemoryManager::MemoryManager(const MemoryManager& orig) {
@@ -38,32 +38,44 @@ MemoryManager::~MemoryManager() {
 void MemoryManager::allocateMemoryForProcess(Process* process) {
     // INSERT YOUR CODE TO ALLOCATE MEMOTY FOR THE PROCESS
     // ...
-    unsigned int begin = process->getBeginMemory();
-    unsigned int end = process->getEndMemory();
-    unsigned int processSize = end - begin;
-    for (int i = 0; i < NUMBER_PARTITIONS; i++) {
+    unsigned int processSize = getProcessSize(process);
+    std::cout << "Process size :" << processSize << "\n" << "  Process id : " << process->getId() << "\n";
+    for (int i=0; i<NUMBER_PARTITIONS; i++) {
+        std::cout << "Size Partition :" << _partitions[i]->getLength() << "\n";
         if (_partitions[i]->getLength() > processSize) {
             if(!(_partitions[i]->hasProcess())) {
                 _partitions[i]->setProcess(process);
+                std::cout << "I was allocated\n";
+                return;
             } else {
-                _partitions[i]->getProcessQueue().push(process);
+                _partitions[i]->addQueue(process);
+                std::cout << "Entrei para fila" << process->getId() << "\n";
+                return;
             }
         }
-        else {
-            throw "não foi possível alocar";
-        }
     }
-
+    throw "não foi possível alocar";
 }
 
 void MemoryManager::deallocateMemoryOfProcess(Process* process) {
     // INSERT YOUR CODE TO DEALLOCATE MEMORY OF THE PROCESS
     // ...
-
-
+    for (int i=0; i<NUMBER_PARTITIONS; i++) {
+        if(!(_partitions[i]->hasProcess()))
+            continue;
+        if (_partitions[i]->getProcess()->getId() == process->getId()) {
+            _partitions[i]->removeProcess();
+            std::cout << "Vazia? :" << _partitions[i]->queueEmpty() << "\n";
+            if (!(_partitions[i]->queueEmpty())) {
+                _partitions[i]->setProcess(_partitions[i]->popQueue());
+                std::cout << "Deallocated Process id :" << process->getId() << "\n";
+            }
+        }
+    }
+    
 }
 
-unsigned intMemoryManager::getNumPartitions() {
+unsigned int MemoryManager::getNumPartitions() {
     // INSERT YOUR CODE TO RETURN THE QUANTITY OF ALLOCATED PARTITIONS
     // ...
 
@@ -83,22 +95,41 @@ void MemoryManager::showAllocatedMemory() {
     // INSERT YOUR CODE TO SHOW EACH ONE OF THE ALLOCATED MEMORY PARTITIONS, INCLUDING INTERNAL AND EXTERNAL (THE FOLLOWING) FRAGMENTATION
     // ...
 
-    // for ... {  // for each partition...
+    // for ... {  // for each partition...  
     // ...
-
-    beginAllocatedAddress = 0;
-    endAllocatedAddress = 0;
-    totalAllocated = 0;
-    processId = 0;
-    internalFragmentation = 0;
     externalFragmentation = 0;
-
-    // no not change the next line (the way information are shown)
-    std::cout << "\tAllocd: " << "B=" << (beginAllocatedAddress) << ", \tE=" << (endAllocatedAddress) << ", \tT=" << (totalAllocated) << ", \tPID=" << (processId)
+    for (int i=0; i<NUMBER_PARTITIONS; i++) {
+        
+        beginAllocatedAddress = _partitions[i]->getBeginAddress();
+        endAllocatedAddress = _partitions[i]->getEndAddress();
+        if (_partitions[i]->hasProcess()) {
+            totalAllocated = getProcessSize(_partitions[i]->getProcess());
+            processId = _partitions[i]->getProcess()->getId();
+            internalFragmentation = _partitions[i]->getLength() - getProcessSize(_partitions[i]->getProcess());
+        } else {
+            totalAllocated = 0;
+            processId = 0;
+            internalFragmentation = _partitions[i]->getLength();
+        }
+        std::cout << "\tAllocd: " << "B=" << (beginAllocatedAddress) << ", \tE=" << (endAllocatedAddress) << ", \tT=" << (totalAllocated) << ", \tPID=" << (processId)
             << ", \tIF=" << (internalFragmentation) << ", \tEF=" << (externalFragmentation) << "\n";
+    }
+    // no not change the next line (the way information are shown)
+
     // }
 }
 
 unsigned int MemoryManager::getSize() const {
     return _size;
 }
+
+unsigned int MemoryManager::getProcessSize(Process* process) {
+    std::list<MemorySegment*>* segments = process->getSegments();
+    std::list<MemorySegment*>::iterator iterator;
+    unsigned int sum = 0;
+    for (iterator = segments->begin(); iterator != segments->end(); ++iterator) {
+        sum = sum + (*iterator)->getSize();
+    }
+    return sum;
+}
+
